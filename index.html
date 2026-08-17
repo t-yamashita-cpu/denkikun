@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ドコモでんき料金シミュレーター</title>
+
+<style>
+
+body{
+    font-family:sans-serif;
+    background:#f5f5f5;
+    margin:0;
+    padding:20px;
+}
+
+.container{
+    max-width:700px;
+    margin:auto;
+    background:#fff;
+    padding:25px;
+    border-radius:16px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+h1{
+    text-align:center;
+    color:#cc0033;
+}
+
+label{
+    display:block;
+    margin-top:15px;
+    font-weight:bold;
+}
+
+input,select{
+    width:100%;
+    padding:12px;
+    margin-top:5px;
+    border-radius:8px;
+    border:1px solid #ccc;
+    box-sizing:border-box;
+}
+
+button{
+    width:100%;
+    margin-top:25px;
+    padding:14px;
+    border:none;
+    border-radius:8px;
+    background:#cc0033;
+    color:white;
+    font-size:18px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#a8002c;
+}
+
+.card{
+    margin-top:12px;
+    background:#fafafa;
+    padding:15px;
+    border-radius:10px;
+}
+
+.title{
+    font-size:14px;
+    color:#666;
+}
+
+.value{
+    font-size:28px;
+    font-weight:bold;
+    color:#cc0033;
+}
+
+.plan{
+    display:inline-block;
+    padding:6px 12px;
+    background:#cc0033;
+    color:white;
+    border-radius:20px;
+    font-weight:bold;
+}
+
+.footer{
+    margin-top:18px;
+    font-size:12px;
+    color:#666;
+    line-height:1.7;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<h1>⚡ ドコモでんき料金シミュレーター</h1>
+
+<label>使用量（kWh）</label>
+<input type="number" id="kwh" value="300">
+
+<label>プラン</label>
+<select id="plan">
+    <option value="Basic">Basic</option>
+    <option value="Green">Green</option>
+</select>
+
+<label>ポイント還元率（基本）</label>
+<select id="rate">
+    <option value="0.5">0.5%</option>
+    <option value="1">1%</option>
+    <option value="2" selected>2%</option>
+    <option value="5">5%</option>
+    <option value="10">10%</option>
+    <option value="15">15%</option>
+    <option value="20">20%</option>
+</select>
+
+<label>ドコモガス契約</label>
+<select id="gas">
+    <option value="0" selected>なし</option>
+    <option value="2">あり（+2%）</option>
+</select>
+
+<label>燃料費調整額（円/kWh）</label>
+<input type="number" id="fuel" value="0" step="0.01">
+
+<label>再エネ賦課金（円/kWh）</label>
+<input type="number" id="renewable" value="3.98" step="0.01">
+
+<button onclick="calc()">計算する</button>
+
+<div id="result"></div>
+
+</div>
+
+<script>
+
+function calc(){
+
+    const kwh = Number(document.getElementById("kwh").value);
+    const plan = document.getElementById("plan").value;
+    const rate = Number(document.getElementById("rate").value);
+    const gasBonus = Number(document.getElementById("gas").value);
+
+    const fuelUnit =
+        Number(document.getElementById("fuel").value);
+
+    const renewableUnit =
+        Number(document.getElementById("renewable").value);
+
+    let fee = 0;
+
+    if(kwh <= 15){
+
+        fee = 522.58;
+
+    }else if(kwh <= 120){
+
+        fee =
+            522.58 +
+            ((kwh - 15) * 20.21);
+
+    }else if(kwh <= 300){
+
+        fee =
+            522.58 +
+            (105 * 20.21) +
+            ((kwh - 120) * 25.61);
+
+    }else{
+
+        fee =
+            522.58 +
+            (105 * 20.21) +
+            (180 * 25.61) +
+            ((kwh - 300) * 28.59);
+    }
+
+    let greenFee = 0;
+
+    if(plan === "Green"){
+        greenFee = 500;
+    }
+
+    fee += greenFee;
+
+    const fuelCost =
+        kwh * fuelUnit;
+
+    const renewableCost =
+        kwh * renewableUnit;
+
+    const totalBill =
+        fee + fuelCost + renewableCost;
+
+    const totalRate =
+        rate + gasBonus;
+
+    // ポイント対象は電気料金部分のみ
+    const monthlyPoint =
+        Math.floor(fee / 100) * totalRate;
+
+    const yearlyPoint =
+        monthlyPoint * 12;
+
+    const actualCost =
+        totalBill - monthlyPoint;
+
+    const yearlyCost =
+        totalBill * 12;
+
+    document.getElementById("result").innerHTML = `
+
+    <div class="card">
+        <div class="title">プラン</div>
+        <div style="margin-top:10px;">
+            <span class="plan">${plan}</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">電気料金（ポイント対象）</div>
+        <div class="value">
+            ${fee.toLocaleString('ja-JP',{maximumFractionDigits:0})} 円
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">燃料費調整額</div>
+        <div class="value">
+            ${fuelCost.toLocaleString('ja-JP',{maximumFractionDigits:0})} 円
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">再エネ賦課金</div>
+        <div class="value">
+            ${renewableCost.toLocaleString('ja-JP',{maximumFractionDigits:0})} 円
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">請求見込額（月額）</div>
+        <div class="value">
+            ${totalBill.toLocaleString('ja-JP',{maximumFractionDigits:0})} 円
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">請求見込額（年間）</div>
+        <div class="value">
+            ${yearlyCost.toLocaleString('ja-JP',{maximumFractionDigits:0})} 円
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">適用還元率</div>
+        <div class="value">
+            ${totalRate}%
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">獲得ポイント（月間）</div>
+        <div class="value">
+            ${monthlyPoint.toLocaleString()} pt
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">獲得ポイント（年間）</div>
+        <div class="value">
+            ${yearlyPoint.toLocaleString()} pt
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="title">実質負担額（月額）</div>
+        <div class="value">
+            ${actualCost.toLocaleString('ja-JP',{maximumFractionDigits:0})} 円
+        </div>
+    </div>
+
+    <div class="footer">
+        ※関西エリア単価ベース<br>
+        ※Greenプランは500円加算<br>
+        ※ドコモガス契約時は還元率+2%<br>
+        ※ポイント対象は電気料金部分のみ<br>
+        ※燃料費調整額・再エネ賦課金はポイント対象外
+    </div>
+
+    `;
+}
+
+calc();
+
+</script>
+
+</body>
+</html>
